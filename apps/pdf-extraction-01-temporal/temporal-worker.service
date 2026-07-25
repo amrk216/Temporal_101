@@ -1,0 +1,14 @@
+[Unit]
+Description=Temporal PDF Pipeline Worker
+After=network.target
+
+[Service]
+Type=simple
+User=amrkhaled
+WorkingDirectory=/home/amrkhaled/work/Temporal_101/apps/pdf-extraction-01-temporal
+ExecStart=/home/amrkhaled/.conda/envs/temporal/bin/python /home/amrkhaled/work/Temporal_101/apps/pdf-extraction-01-temporal/worker.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
