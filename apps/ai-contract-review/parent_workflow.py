@@ -98,7 +98,7 @@ class ContractReviewWorkflow:
 
         combined_summaries = "\n\n".join([
             f"** Contract {i+1} ({summary['s3_path']}) Summary **\n{summary['summary']}\n\n**Key Risks**\n{summary['key_risks']}"
-            for i, summary in self._summaries
+            for i, summary in enumerate(self._summaries)
         ])
 
         llm_prompt = _SYNTHESIS_PROMPT.format(
@@ -115,4 +115,11 @@ class ContractReviewWorkflow:
         )
 
         self._report = json_repair.loads(llm_result.content)
+
+
+        return ContractReviewOutput(
+            report = self._report,
+            source = self._summaries,   
+            approved_by = ""
+        )
             

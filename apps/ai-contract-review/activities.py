@@ -41,9 +41,9 @@ def get_s3_path():
     return boto3.client(
         's3',
         region_name = os.environ['AWS_REGION'],
-                aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID'],
-                aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY'],
-                endpoint_url = os.environ['AWS_S3_ENDPOINT_URL'],
+        aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY'],
+        endpoint_url = os.environ['AWS_S3_ENDPOINT_URL']
     )
 
 
@@ -70,11 +70,15 @@ async def extract_pdf(params: ExtractPDFInput) -> ExtractPDFOutput:
     s3_client = get_s3_path()
     bucket,key = parse_s3_path(params.s3_path)
 
+    activity.logger.info(f"Downloading {params.s3_path} from bucket:{bucket} key:{key}")
+
     # downloda file 
     filename = Path(key).name 
     TEMP_DIR = os.environ['TEMP_DIR']
 
     local_path = str(Path(TEMP_DIR)/filename)
+
+
 
     s3_client.download_file(
         bucket,
@@ -132,7 +136,7 @@ async def extract_pdf(params: ExtractPDFInput) -> ExtractPDFOutput:
     )
 
 # activitiy 2 : Call the llm <<< input --> prompet and content -- output ---> reustl >>>
-@ activity.defn
+@activity.defn
 async def call_llm(params: CallLLMInput)->CallLLMOutput:
     activity.logger.info("Calling LLM")
     activity.heartbeat({
@@ -143,7 +147,7 @@ async def call_llm(params: CallLLMInput)->CallLLMOutput:
 
     llm_client = OpenAI(
         api_key = os.environ["API_KEY"],
-        base_url = "https://inference.dahl.global/v1/models"
+        base_url = "https://inference.dahl.global/v1"
     )
 
     response = llm_client.chat.completions.create(
