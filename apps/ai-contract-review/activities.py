@@ -68,7 +68,7 @@ async def extract_pdf(params: ExtractPDFInput) -> ExtractPDFOutput:
 
     # connection with s3 
     s3_client = get_s3_path()
-    bucket,key = parse_s3_path()
+    bucket,key = parse_s3_path(params.s3_path)
 
     # downloda file 
     filename = Path(key).name 
