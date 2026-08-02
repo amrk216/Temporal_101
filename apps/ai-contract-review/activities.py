@@ -20,7 +20,7 @@ class ExtractPDFInput:
     batch_size : int = 2 
 
 
-@ dataclass
+@dataclass
 class ExtractPDFOutput:
     s3_path : str
     markdown_text : str
@@ -49,7 +49,7 @@ def get_s3_path():
 
 def parse_s3_path(s3_path:str):
     s3_path_no_scheme = s3_path.replace('s3://','')
-    bucket, _, key = s3_path_no_scheme.partition("/")
+    bucket, _, key = s3_path_no_scheme.partition('/')
     return bucket,key
 # activitiy 1 : Extract PDF from s3 <<< input s3 path  ---> output : path content   >>> 
 
