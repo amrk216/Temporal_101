@@ -70,8 +70,6 @@ async def extract_pdf(params: ExtractPDFInput) -> ExtractPDFOutput:
     s3_client = get_s3_path()
     bucket,key = parse_s3_path(params.s3_path)
 
-    activity.logger.info(f"Downloading {params.s3_path} from bucket:{bucket} key:{key}")
-
     # downloda file 
     filename = Path(key).name 
     TEMP_DIR = os.environ['TEMP_DIR']

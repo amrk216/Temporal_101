@@ -1,3 +1,4 @@
+import json
 import textwrap
 from dataclasses import dataclass
 from datetime import timedelta
@@ -44,6 +45,52 @@ class ContractReviewWorkflow:
         self._status : str = "processing"
         self._summaries: list = []
         self._report: str= ""
+
+        self._review_decision: Optional[str] = None
+        self._review_feedback: str = ""
+        self._approved_by: str = ""
+
+
+    # Query : status of the workflow
+    @workflow.query
+    def get_status(self) -> dict:
+        return {
+            "status": self._status,
+            "pdfs_processed": len(self._summaries),
+            "report_ready": json.dumps(self._report,ensure_ascii=False)[:500],
+            "approved_by": self._approved_by,
+        }
+
+    # Query 
+    @workflow.query
+    def get_report(self) -> dict:
+        return {
+            "status": self._status,
+            "report": self._report,
+            "approved_by": self._approved_by,
+            "source": [s["s3_path"] for s in self._summaries]
+        }
+
+        # signal handler for review decision
+    @workflow.signal
+    async def assign_reviewer(self,name:str):
+        self._approved_by = name
+
+    @workflow.update
+    async def submit_decision(self, decision:str, feedback:str = "") -> str:
+        self._review_decision = decision
+        self._review_feedback = feedback
+
+        return f"Decision '{decision}' recorded "
+
+    @submit_decision.validator
+    def validate_decision(self, decision:str, feedback:str = "")->None:
+        if decision not in ("approve", "revise"):
+            raise ValueError(f"Must be 'approve' or 'revise', got '{decision}'")
+
+        if decision == "revise" and not feedback.strip():
+            raise ValueError(f"Feedback is required when requesting revision")
+
 
     @workflow.run
     async def run(self, params: ContractReviewInput) -> ContractReviewOutput:
@@ -117,9 +164,53 @@ class ContractReviewWorkflow:
         self._report = json_repair.loads(llm_result.content)
 
 
+        for revision_no in range(params.max_revisions+1):
+
+            self._status = "awaiting_review"
+            workflow.logger.info(f"Awaiting review for human review {revision_no}")
+
+            self._review_decision = None
+
+
+            try: 
+                await workflow.wait_condition(
+                    lambda: self._review_decision is not None,
+                    timeout=timedelta(days=3),
+                )
+            except asyncio.TimeoutError:
+                workflow.logger.warning("Review timed out after 3 days, proceeding with current report")
+                break
+
+            if self._review_decision == "approve":
+                workflow.logger.info("Report approved by reviewer")
+                self._approved_by = workflow.info().workflow_id
+                break
+
+            self._status = "revising"
+            workflow.logger.info(f"Revision requested by reviewer: {self._review_feedback}")
+
+            llm_prompt = _REVISION_PROMPT.format(
+                report = json.dumps(self._report, indent=2,ensure_ascii=False),
+                feedback = self._review_feedback
+            )
+
+
+            revised_report = await workflow.execute_activity(
+                call_llm,
+                CallLLMInput(prompt=llm_prompt),
+                    retry_policy=DEFAULT_RETRY_POLICY,
+                    start_to_close_timeout=timedelta(minutes=3),
+                    heartbeat_timeout=timedelta(seconds=180)
+            )
+
+            self._report = json_repair.loads(revised_report.content)
+            # Revicsion completed, loop back to await review again
+            self._status = "completed"
         return ContractReviewOutput(
-            report = self._report,
-            source = self._summaries,   
-            approved_by = ""
-        )
-            
+                report = self._report,
+                source = [s["s3_path"] for s in self._summaries],
+                approved_by = self._approved_by
+            )
+
+
+             
