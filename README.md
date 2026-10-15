@@ -1,14 +1,10 @@
-# Temporal 101 Course
+# Temporal 101 
 
 Hands-on Python examples for learning Temporal IO through a small progression of projects:
 
 - a plain Python PDF pipeline
 - the same PDF pipeline implemented with Temporal workflows and activities
 - a larger AI contract review workflow with fan-out child workflows and human-in-the-loop review
-
-Course video:
-
-- [Temporal 101 course on YouTube](https://www.youtube.com/watch?v=-Zib7r3HxyY)
 
 ## What this repository covers
 
